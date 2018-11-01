@@ -1,6 +1,8 @@
 var renderer = null,
     scene = null,
     camera = null,
+    cameraHelper = null
+    cameraSpeed = 0.3,
     root = null,
     orbitControls = null,
     loader = null,
@@ -16,7 +18,7 @@ var renderer = null,
     lastPos = 0,
     visible = true,
     score = 0,
-    blockWidth = 200;
+    blockWidth = 1000;
 
 var blockGeometry = new THREE.BoxGeometry( blockWidth, 10 ,displacement );
 
@@ -74,11 +76,17 @@ function loadPig() {
     main_character.boxHelper.visible = visible;
 
 
+    cameraHelper = new THREE.Object3D;
+    cameraHelper.add(camera);
 
-    scene.add(camera)
-    // pig.add(camera);
+
+    scene.add(cameraHelper);
     scene.add(pig);
     scene.add(main_character.boxHelper);
+
+    // scene.add(camera)
+
+
 
     // main_character.newPos = main_character.object.position.clone();
     // main_character.savedPos = main_character.object.position.clone();
@@ -155,8 +163,10 @@ function run() {
     renderer.render( scene, camera );
     orbitControls.update();
 
-    // camera.position.z -= 1;
-    // camera.position.y -= 1;
+    cameraHelper.position.z -= 1*cameraSpeed;
+    if(cameraHelper.position.z > main_character.object.position.z){
+      cameraHelper.position.z -= 1*.55;
+    }
 
     KF.update();
     main_character.boxHelper.update();
@@ -215,9 +225,16 @@ function createGrassBlock(minTrees, maxTrees) {
   mesh.position.z = -lastPos;
   root.add(mesh);
 
+  createTree(1, treeXRange[1].max + 4*gridSize);
+  createTree(1, treeXRange[1].max + 2*gridSize);
+
+  for (var i = 0; i < 5; i++) {
+    createTree(1, treeXRange[2].min - (4*i)*gridSize);
+  }
+
 
   if(maxTrees>0){
-    var treeType = Math.floor(Math.random() * 2) + 0;
+    var treeType = Math.floor(Math.random() * 3) + 0;
 
     var grid = [];
     var gridBlock = Math.abs(treeXRange[treeType].max - treeXRange[treeType].min)/gridSize
@@ -350,7 +367,7 @@ function createScene(canvas) {
   scene = new THREE.Scene();
   // Add  a camera so we can view the scene
   camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height, 1, 4000 );
-  camera.position.set(-2, 70, 112);
+  camera.position.set(50, 150, 112);
   // scene.add(camera);
 
   ambientLight = new THREE.AmbientLight ( 0x888888 );
@@ -461,13 +478,13 @@ function moveCharacter() {
           {x:main_character.object.position.x ,y:main_character.object.position.y-2 ,z:main_character.object.position.z },
           {x:main_character.object.position.x ,y:main_character.object.position.y ,z:main_character.object.position.z },
           {x:main_character.newPos.x,y:main_character.newPos.y+2.2,z:main_character.newPos.z},
-          {x:main_character.newPos.x,y:main_character.newPos.y,z:main_character.newPos.z}
+          {x:main_character.newPos.x,y:0,z:main_character.newPos.z}
         ],
         target: main_character.object.position
       },
     ],
     loop: false,
-    duration:180,
+    duration:200,
   });
   animator.start();
 }
