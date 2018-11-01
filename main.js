@@ -16,11 +16,14 @@ var renderer = null,
     carBoxes = [],
     displacement = Math.abs(treeXRange[0].max - treeXRange[0].min)/gridSize,
     lastPos = 0,
-    visible = false,
+    visible = true,
     score = 0,
     blockWidth = 800
     spotLight = null
-    gameEnded = false;
+    gameEnded = false
+    plank = null
+    planks = []
+    waterBlocks = [];
 
 var blockGeometry = new THREE.BoxGeometry( blockWidth, 10 ,displacement );
 
@@ -128,10 +131,15 @@ function loadTrees(callback){
 }
 
 function loadPlank(){
-    var loader = new THREE.FBXLoader();
-    loader.load( 'objects/plank.fbx', function ( object ){
-      scene.add(object)
-    });
+  var map = new THREE.TextureLoader().load("objects/plankmaterial.jpg");
+    var objLoader = new THREE.OBJLoader();
+    objLoader.load( 'objects/plank.obj', function ( object ) {
+      plank = new THREE.Mesh(object.children[0].geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, side:THREE.DoubleSide}));
+      // variar z = 9
+      plank.scale.set(9,10,9);
+      plank.rotation.y = -Math.PI / 2;
+      // scene.add(plank);
+    }, null, null  );
 
     // var mtlLoader = new THREE.MTLLoader();
     // mtlLoader.load( 'objects/plank.mtl', function( materials ) {
@@ -210,6 +218,17 @@ function run() {
     for (var i = 0; i < treeBoxes.length; i++) {
       if(main_character.bBox.intersectsBox(treeBoxes[i])){
         bounceBack();
+      }
+    }
+
+    for (var i = 0; i < waterBlocks.length; i++) {
+      if(main_character.bBox.intersectsBox(waterBlocks[i])){
+        if(!main_character.bBox.intersectsBox(planks[i])){
+          gameEnded = true;
+          main_character.object.position.set(main_character.resetPosition.x,main_character.resetPosition.y,main_character.resetPosition.z);
+          main_character.farthest = main_character.resetPosition.z;
+          main_character.update();
+        }
       }
     }
 }
@@ -323,11 +342,8 @@ function createTree(type, xPosition){
   bBox.setFromObject(boxHelper);
   boxHelper.visible = visible;
 
-
-
   scene.add(tree);
   scene.add(boxHelper);
-
   treeBoxes.push(bBox);
 
 
@@ -359,11 +375,31 @@ function createWaterBlock() {
 
   root.add( boxHelper );
 
+  waterBlocks.push(bBox);
+
+  createPlank();
 
   lastPos = lastPos + displacement;
 
 
 
+}
+
+function createPlank() {
+  var newPlank = plank.clone();
+  newPlank.position.y -= 5;
+  newPlank.position.z = -lastPos;
+
+  var boxHelper = new THREE.BoxHelper(newPlank, 0x00ff00);
+  boxHelper.update();
+  var bBox = new THREE.Box3();
+  bBox.setFromObject(boxHelper);
+  boxHelper.visible = visible;
+
+  scene.add(boxHelper);
+  planks.push(bBox);
+  // planks.push({plank:newPlank, bBox: bBox, boxHelper: boxHelper})
+  scene.add(newPlank);
 }
 
 
@@ -426,17 +462,15 @@ function createScene(canvas) {
   loadTrees(function() {
     loadCar(function() {
       createGrassBlock(0,0);
+      createWaterBlock();
       for (var i = 0; i < 20; i++) {
         var randomBlock = Math.floor(Math.random() * 9) + 0;
         createBlocksAll[randomBlock]();
       }
     });
-
-
-    // loadPlank();
-
-
   });
+
+  loadPlank();
 
 
 
