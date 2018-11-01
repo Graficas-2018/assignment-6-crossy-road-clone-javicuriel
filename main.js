@@ -16,7 +16,7 @@ var renderer = null,
     carBoxes = [],
     displacement = Math.abs(treeXRange[0].max - treeXRange[0].min)/gridSize,
     lastPos = 0,
-    visible = true,
+    visible = false,
     score = 0,
     blockWidth = 800
     spotLight = null
@@ -475,7 +475,9 @@ function createScene(canvas) {
   loadTrees(function() {
     loadCar(function() {
       createGrassBlock(0,0);
-      createWaterBlock();
+      createGrassBlock(0,1);
+      createGrassBlock(0,2);
+      createGrassBlock(0,2);
       for (var i = 0; i < 20; i++) {
         var randomBlock = Math.floor(Math.random() * 9) + 0;
         createBlocksAll[randomBlock]();
