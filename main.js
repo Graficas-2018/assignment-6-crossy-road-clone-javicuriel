@@ -6,7 +6,18 @@ var renderer = null,
     loader = null,
     main_character = {},
     trees = [],
-    car = {};
+    treeXRange = [{min:-52,max:127},{min:-86,max:92},{min:-119,max:56}],
+    treeBoxes = [],
+    gridSize = 8,
+    car = {},
+    cars =[],
+    carBoxes = [],
+    displacement = Math.abs(treeXRange[0].max - treeXRange[0].min)/gridSize,
+    lastPos = 0
+    visible = true
+    score = 0;
+
+var blockGeometry = new THREE.BoxGeometry( 200, 10 ,displacement );
 
 class Element {
   constructor(object) {
@@ -19,7 +30,7 @@ class Element {
 
     this.cubeBBox = new THREE.Box3();
     this.cubeBBox.setFromObject(this.cubeBoxHelper);
-    this.cubeBoxHelper.visible = false;
+    this.cubeBoxHelper.visible = visible;
 
   }
 }
@@ -44,6 +55,36 @@ function loadObj(obj_url, texture_url, callback){
   );
 }
 
+function loadPig() {
+  loadObj('objects/pig.obj', 'objects/pig.png', function(pig){
+    main_character.object = pig;
+    pig.position.z = 9.5;
+
+    pig.position.x = treeXRange[0].min;
+    main_character.resetPosition = pig.position.clone();
+
+    main_character.farthest = pig.position.z;
+
+    pig.scale.set(1.2,1.2,1.1);
+    main_character.boxHelper = new THREE.BoxHelper(pig, 0x00ff00);
+    main_character.bBox = new THREE.Box3();
+    main_character.boxHelper.update();
+    main_character.bBox.setFromObject(main_character.boxHelper);
+    main_character.boxHelper.visible = visible;
+
+
+
+    scene.add(camera)
+    // pig.add(camera);
+    scene.add(pig);
+    scene.add(main_character.boxHelper);
+
+    // main_character.newPos = main_character.object.position.clone();
+    // main_character.savedPos = main_character.object.position.clone();
+
+  });
+}
+
 function loadObj2(obj_url, mtl_url, callback){
   var mtlLoader = new THREE.MTLLoader();
   mtlLoader.load( mtl_url, function( materials ) {
@@ -56,10 +97,55 @@ function loadObj2(obj_url, mtl_url, callback){
   });
 }
 
+function loadTrees(callback){
+  var obj_url = 'objects/Cartoon trees.obj';
+  var mtl_url = 'objects/Cartoon trees.mtl';
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.load( mtl_url, function( materials ) {
+      materials.preload();
+      var objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials( materials );
+      objLoader.load( obj_url, function ( object ) {
+          for (var i = 0; i < 3; i++) {
+            var tree = {}
+            tree.object = object.children[i];
+            trees.push(tree);
+          }
+          callback();
+        }, null, null );
+  });
+}
+
+function loadPlank(){
+    var loader = new THREE.FBXLoader();
+    loader.load( 'objects/plank.fbx', function ( object ){
+      scene.add(object)
+    });
+
+    // var mtlLoader = new THREE.MTLLoader();
+    // mtlLoader.load( 'objects/plank.mtl', function( materials ) {
+    //     materials.preload();
+    //     var objLoader = new THREE.OBJLoader();
+    //     objLoader.setMaterials( materials );
+    //     objLoader.load( 'objects/plank.obj', function ( object ) {
+    //
+    //         scene.add(object);
+    //       }, null, null  );
+    // });
+}
+
 function loadCar(callback){
     var loader = new THREE.FBXLoader();
     loader.load( 'objects/car.fbx', function ( object ){
-      callback(object);
+      car.object = object;
+      car.object.scale.set(.14,.14,.14);
+      car.object.position.x += 120;
+      car.object.position.y += 6;
+      car.object.position.z += 33;
+
+      callback();
+
+
     });
   }
 
@@ -68,49 +154,182 @@ function run() {
     renderer.render( scene, camera );
     orbitControls.update();
 
+    // camera.position.z -= 1;
+    // camera.position.y -= 1;
 
-    car.object.position.x -= 2;
+    KF.update();
+    main_character.boxHelper.update();
+    main_character.bBox.setFromObject(main_character.boxHelper);
 
+    // CARS
+    for (var i = 0; i < cars.length; i++) {
+      cars[i].car.position.x -= cars[i].speed;
 
-    if(car.object.position.x < -100){
-      car.object.position.x = 100;
+      if(cars[i].car.position.x < -120){
+        cars[i].car.position.x = cars[i].resetPosition.x;
+      }
+      cars[i].boxHelper.update();
+      cars[i].bBox.setFromObject(cars[i].boxHelper);
+
+      if(main_character.bBox.intersectsBox(cars[i].bBox)){
+        main_character.object.position.set(main_character.resetPosition.x,main_character.resetPosition.y,main_character.resetPosition.z);
+        score = 0;
+        main_character.farthest = main_character.resetPosition.z;
+        $("#score").html(score);
+        main_character.update();
+      }
     }
-    car.boxHelper.update();
-    car.bBox.setFromObject(car.boxHelper);
 
-    if(main_character.bBox.intersectsBox(trees[0].bBox)){
-      bounceBack();
-    }
-    if(main_character.bBox.intersectsBox(trees[1].bBox)){
-      bounceBack();
-    }
-    if(main_character.bBox.intersectsBox(trees[2].bBox)){
-      bounceBack();
-    }
 
-    if(main_character.bBox.intersectsBox(car.bBox)){
-      main_character.object.position.set(0,0,0);
-      main_character.update()
+    // TREES
+    for (var i = 0; i < treeBoxes.length; i++) {
+      if(main_character.bBox.intersectsBox(treeBoxes[i])){
+        bounceBack();
+      }
     }
 }
 
-function bounceBack(){
-  switch (main_character.last) {
-    case 'U':
-      main_character.movements['D'](10);
-      break;
-    case 'D':
-      main_character.movements['U'](10);
-      break;
-    case 'R':
-      main_character.movements['L'](10);
-      break;
-    case 'L':
-      main_character.movements['R'](10);
-      break;
-    default:
-      break;
+
+
+/**
+ * Randomize array element order in-place.
+ * Using Durstenfeld shuffle algorithm.
+ */
+ // FROM STACKOVERFLOW
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+function createGrassBlock(minTrees, maxTrees) {
+  var mapUrl = "objects/grass.jpg";
+  var map = new THREE.TextureLoader().load(mapUrl);
+  var geometry = new THREE.PlaneGeometry(200, displacement, 10, 10);
+  var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, side:THREE.DoubleSide}));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.z = -lastPos;
+  root.add(mesh);
+
+
+  if(maxTrees>0){
+    var treeType = Math.floor(Math.random() * 2) + 0;
+
+    var grid = [];
+    var gridBlock = Math.abs(treeXRange[treeType].max - treeXRange[treeType].min)/gridSize
+
+    for (var i = 0; i <= gridSize; i++) {
+      grid.push(treeXRange[treeType].min + gridBlock*i);
+    }
+
+    var nTrees = Math.floor(Math.random() * maxTrees) + minTrees;
+    shuffleArray(grid);
+    let selected = grid.slice(0,nTrees);
+
+    for (var i = 0; i < nTrees; i++) {
+      createTree(treeType, selected[i]);
+    }
+
   }
+
+
+  lastPos = lastPos + displacement;
+
+}
+
+function createCarBlock(){
+  var geometry = new THREE.PlaneGeometry(200, displacement, 1, 1);
+  var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0x949597, side:THREE.DoubleSide}));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.z = -lastPos;
+  lastPos = lastPos + displacement;
+
+  mesh2 = mesh.clone();
+  mesh2.position.z = -lastPos;
+
+  root.add(mesh);
+  root.add(mesh2);
+  lastPos = lastPos + displacement;
+
+  createCar(lastPos);
+
+}
+
+function createCar(pos) {
+  var newCar = car.object.clone();
+
+  newCar.position.z -= pos;
+
+  var boxHelper = new THREE.BoxHelper(newCar, 0x00ff00);
+  var bBox = new THREE.Box3();
+  boxHelper.update();
+  bBox.setFromObject(boxHelper);
+  boxHelper.visible = visible;
+
+  speed = Math.floor(Math.random() * 5) + 1;
+
+  cars.push({car:newCar, speed:speed, boxHelper: boxHelper, bBox:bBox, resetPosition: newCar.position.clone()});
+
+  scene.add(newCar);
+  scene.add(boxHelper);
+}
+
+
+function createTree(type, xPosition){
+  var tree = trees[type].object.clone();
+
+  tree.position.set(xPosition, -12, -130.5-lastPos);
+  tree.scale.set(1.5,1.5,1.2);
+
+
+  var boxHelper = new THREE.BoxHelper(tree, 0x00ff00);
+  boxHelper.update();
+  var bBox = new THREE.Box3();
+  bBox.setFromObject(boxHelper);
+  boxHelper.visible = visible;
+
+
+
+  scene.add(tree);
+  scene.add(boxHelper);
+
+  treeBoxes.push(bBox);
+
+
+}
+
+function createWaterBlock() {
+  var mapUrl = "objects/water_texture.jpg";
+  var map = new THREE.TextureLoader().load(mapUrl);
+  var geometry = new THREE.PlaneGeometry(200, displacement, 1, 1);
+  var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, transparent: true, opacity: 0.3,side:THREE.DoubleSide}));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.z = -lastPos;
+  mesh.position.y -= 10;
+  root.add(mesh);
+
+
+
+  var material = new THREE.MeshBasicMaterial( {color: 0xffffff, map:map ,transparent: true, opacity: 0.6} );
+  var cube = new THREE.Mesh( blockGeometry, material );
+  cube.position.z = -lastPos;
+  cube.position.y -= 5;
+  root.add( cube );
+
+  boxHelper = new THREE.BoxHelper(cube, 0x00ff00);
+  bBox = new THREE.Box3();
+  boxHelper.update();
+  bBox.setFromObject(boxHelper);
+  boxHelper.visible = visible;
+
+  root.add( boxHelper );
+
+
+  lastPos = lastPos + displacement;
+
 }
 
 
@@ -128,8 +347,8 @@ function createScene(canvas) {
   scene = new THREE.Scene();
   // Add  a camera so we can view the scene
   camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height, 1, 4000 );
-  camera.position.set(-2, 6, 12);
-  scene.add(camera);
+  camera.position.set(-2, 70, 112);
+  // scene.add(camera);
 
   ambientLight = new THREE.AmbientLight ( 0x888888 );
   root = new THREE.Object3D;
@@ -137,120 +356,138 @@ function createScene(canvas) {
 
   orbitControls = new THREE.OrbitControls( camera );
 
-
-
-  var mapUrl = "../images/checker_large.gif";
-  var map = new THREE.TextureLoader().load(mapUrl);
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  map.repeat.set(8, 8);
-  var geometry = new THREE.PlaneGeometry(200, 200, 10, 10);
-  var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, side:THREE.DoubleSide}));
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.z = -40;
-  root.add( mesh );
-
   scene.add(root);
 
-  // trees = [];
-  loadObj2('objects/Cartoon trees.obj', 'objects/Cartoon trees.mtl', function(object){
-    for (var i = 0; i < 3; i++) {
-      var tree = {}
-
-      tree.object = object.children[i];
-
-      trees.push(tree);
-    }
-    var vec = new THREE.Vector3( 0, 0, 0);
-    for (var i = 0; i < trees.length; i++) {
-      trees[i].object.position.set(0, -12, -200);
-      trees[i].object.scale.set(1.5,1.5,1.5);
-      scene.add(trees[i].object);
-
-
-      trees[i].boxHelper = new THREE.BoxHelper(trees[i].object, 0x00ff00);
-      trees[i].boxHelper.update();
-      trees[i].bBox = new THREE.Box3();
-      trees[i].bBox.setFromObject(trees[i].boxHelper);
-      trees[i].boxHelper.visible = true;
-
-      scene.add(trees[i].boxHelper);
-      // console.log(trees[i]);
-    }
-    // for (var i = 0; i < 20; i++) {
-    //   scene.add(trees[1].clone());
-    //   trees[1].scale.set(1.5,1.5,1.5);
-    //   trees[1].position.set(10*i, -12, -200);
-    //
-    // }
-  });
 
 
 
-  loadObj('objects/pig.obj', 'objects/pig.png', function(pig){
-    main_character.object = pig;
 
-    main_character.boxHelper = new THREE.BoxHelper(pig, 0x00ff00);
-    main_character.boxHelper.update();
-    main_character.bBox = new THREE.Box3();
-    main_character.bBox.setFromObject(main_character.boxHelper);
-    main_character.boxHelper.visible = true;
 
-    scene.add(pig);
-    scene.add(main_character.boxHelper);
-  });
+  // var createBlocksAll = [(function(){createGrassBlock(0,4)})(), (function(){createCarBlock()})(), (function(){createWaterBlock()})()];
+  var createBlocksAll = [(function(){createGrassBlock(0,4)}), (function(){createCarBlock()}), (function(){createWaterBlock()})];
 
-  main_character.movements = {
-    'L': function(displacement){main_character.object.position.x -= displacement; main_character.last = 'L';main_character.update()},
-    'U': function(displacement){main_character.object.position.z -= displacement; main_character.last = 'U';main_character.update()},
-    'D': function(displacement){main_character.object.position.z += displacement; main_character.last = 'D';main_character.update()},
-    'R': function(displacement){main_character.object.position.x += displacement; main_character.last = 'R';main_character.update()},
+  for (var i = 0; i < 4; i++) {
+    createBlocksAll.push((function(){createGrassBlock(0,4)}));
+  }
+  for (var i = 0; i < 2; i++) {
+    createBlocksAll.push((function(){createWaterBlock()}));
+  }
+  for (var i = 0; i < 2; i++) {
+    createBlocksAll.push((function(){createCarBlock()}));
   }
 
-  main_character.update = function(){
-    main_character.boxHelper.update(); // update the BoxHelper to match the cube's position
-    main_character.bBox.setFromObject(main_character.boxHelper);
-  }
-
-  loadCar(function(object){
-    car.object = object;
-    car.object.scale.set(.14,.14,.14);
-    car.object.position.x += 100;
-    car.object.position.y += 6;
-    car.object.position.z -= 100;
-
-    car.boxHelper = new THREE.BoxHelper(car.object, 0x00ff00);
-    car.boxHelper.update();
-    car.bBox = new THREE.Box3();
-    car.bBox.setFromObject(main_character.boxHelper);
-    car.boxHelper.visible = true;
+  loadPig();
+  loadTrees(function() {
+    loadCar(function() {
+      createGrassBlock(0,0);
+      for (var i = 0; i < 20; i++) {
+        var randomBlock = Math.floor(Math.random() * 9) + 0;
+        createBlocksAll[randomBlock]();
+      }
+    });
 
 
+    // loadPlank();
 
-    scene.add(car.object);
-    scene.add(car.boxHelper);
 
   });
 
-  document.addEventListener("keydown", onKeyDown, false);
+
+
+  main_character.update = function(direction){
+    main_character.newPos = main_character.object.position.clone();
+    main_character.lastPos = main_character.object.position.clone();
+
+    // camera.newPos = camera.position.clone();
+    // camera.lastPos = camera.position.clone();
+
+    switch (direction) {
+      case 'L':
+        main_character.newPos.x -= displacement;
+        // camera.newPos.x -= displacement;
+        // main_character.object.rotation.y += Math.PI/2;
+        moveCharacter();
+        main_character.last = 'L';
+        break;
+      case 'U':
+        // Goes to negative numbers
+        main_character.newPos.z -= displacement;
+        if(main_character.farthest > main_character.newPos.z){
+          main_character.farthest = main_character.newPos.z;
+          score += 1;
+          $("#score").html(score);
+          var randomBlock = Math.floor(Math.random() * 9) + 0;
+          createBlocksAll[randomBlock]();
+        }
+        // camera.newPos.z -= displacement;
+        moveCharacter();
+        main_character.last = 'U';
+        break;
+      case 'D':
+        main_character.newPos.z += displacement;
+        // camera.newPos.z += displacement;
+        moveCharacter();
+        main_character.last = 'D';
+        break;
+      case 'R':
+        main_character.newPos.x += displacement;
+        // camera.newPos.x += displacement;
+        // main_character.object.rotation.y -= Math.PI/2;
+        moveCharacter();
+        main_character.last = 'R';
+        break;
+    }
+
+  }
+
+
+
+
+  document.addEventListener("keyup", onKeyUp, false);
 
 }
 
-function onKeyDown(event){
-  var displacement = 10;
+function moveCharacter() {
+  animator = new KF.KeyFrameAnimator;
+  animator.init({
+    interps:
+    [{
+        keys:[0,.25,.5,.75 ,1],
+        values:[
+          {x:main_character.object.position.x ,y:main_character.object.position.y ,z:main_character.object.position.z },
+          {x:main_character.object.position.x ,y:main_character.object.position.y-2 ,z:main_character.object.position.z },
+          {x:main_character.object.position.x ,y:main_character.object.position.y ,z:main_character.object.position.z },
+          {x:main_character.newPos.x,y:main_character.newPos.y+2.2,z:main_character.newPos.z},
+          {x:main_character.newPos.x,y:main_character.newPos.y,z:main_character.newPos.z}
+        ],
+        target: main_character.object.position
+      },
+    ],
+    loop: false,
+    duration:180,
+  });
+  animator.start();
+}
 
+function onKeyUp(event){
   switch(event.keyCode){
     case 65:
-      main_character.movements['L'](10);
+      main_character.update('L');
       break;
     case 87:
-      main_character.movements['U'](10);
+      main_character.update('U');
       break;
     case 83:
-      main_character.movements['D'](10);
+      main_character.update('D');
       break;
     case 68:
-      main_character.movements['R'](10);
+      main_character.update('R');
       break;
   }
+}
 
+function bounceBack(){
+  main_character.object.position.set(main_character.lastPos.x,0,main_character.lastPos.z)
+  main_character.boxHelper.update();
+  main_character.bBox.setFromObject(main_character.boxHelper);
 }
