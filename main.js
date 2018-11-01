@@ -18,7 +18,7 @@ var renderer = null,
     lastPos = 0,
     visible = true,
     score = 0,
-    blockWidth = 1000;
+    blockWidth = 800;
 
 var blockGeometry = new THREE.BoxGeometry( blockWidth, 10 ,displacement );
 
