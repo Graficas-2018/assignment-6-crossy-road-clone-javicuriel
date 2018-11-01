@@ -23,22 +23,32 @@
     border: 0;
     overflow: hidden;
     display: block;
-  }
-
-
-  #title {
-  	position:absolute;
     font-size:50px;
     color: white;
-
   }
-
-
+  .menu{
+    position:absolute;
+    top: 15%;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 500px;
+    text-align: center;
+    display:none;
+  }
+  #title {
+  	position:absolute;
+  }
   </style>
   <body>
     <div id="container">
       <div id="title">
         Score: <span id="score">0</span>
+      </div>
+      <div class="menu">
+        <h1>Final Score: </h1><h1 id="final_score"></h1>
+        <button type="button" name="button" onclick="restartGame()">Restart</button>
       </div>
       <canvas id="webglcanvas"></canvas>
     </div>

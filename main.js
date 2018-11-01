@@ -16,9 +16,11 @@ var renderer = null,
     carBoxes = [],
     displacement = Math.abs(treeXRange[0].max - treeXRange[0].min)/gridSize,
     lastPos = 0,
-    visible = true,
+    visible = false,
     score = 0,
-    blockWidth = 800;
+    blockWidth = 800
+    spotLight = null
+    gameEnded = false;
 
 var blockGeometry = new THREE.BoxGeometry( blockWidth, 10 ,displacement );
 
@@ -78,7 +80,7 @@ function loadPig() {
 
     cameraHelper = new THREE.Object3D;
     cameraHelper.add(camera);
-
+    cameraHelper.add(spotLight);
 
     scene.add(cameraHelper);
     scene.add(pig);
@@ -163,9 +165,23 @@ function run() {
     renderer.render( scene, camera );
     orbitControls.update();
 
+    spotLight.position.z -= 1*cameraSpeed;
+
     cameraHelper.position.z -= 1*cameraSpeed;
     if(cameraHelper.position.z > main_character.object.position.z){
-      cameraHelper.position.z -= 1*.55;
+      cameraSpeed += .025
+    }
+    else{
+      cameraSpeed = 0.3;
+    }
+
+    diff = Math.abs(cameraHelper.position.z - main_character.object.position.z);
+    if(diff > displacement*7 ){
+      cameraSpeed = 0;
+      gameEnded = true;
+
+      $("#final_score").html(score);
+      $(".menu").show();
     }
 
     KF.update();
@@ -183,14 +199,12 @@ function run() {
       cars[i].bBox.setFromObject(cars[i].boxHelper);
 
       if(main_character.bBox.intersectsBox(cars[i].bBox)){
+        gameEnded = true;
         main_character.object.position.set(main_character.resetPosition.x,main_character.resetPosition.y,main_character.resetPosition.z);
-        score = 0;
         main_character.farthest = main_character.resetPosition.z;
-        $("#score").html(score);
         main_character.update();
       }
     }
-
 
     // TREES
     for (var i = 0; i < treeBoxes.length; i++) {
@@ -368,9 +382,15 @@ function createScene(canvas) {
   // Add  a camera so we can view the scene
   camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height, 1, 4000 );
   camera.position.set(50, 150, 112);
-  // scene.add(camera);
 
-  ambientLight = new THREE.AmbientLight ( 0x888888 );
+
+  // var aspect = window.innerWidth / window.innerHeight;
+  // var d = 20;
+  // camera = new THREE.OrthographicCamera( - d * aspect, d * aspect, d, - d, 1, 1000 );
+  // camera.position.set(50, 150, 112);
+  // camera.lookAt( scene.position );
+
+  ambientLight = new THREE.AmbientLight ( 0xc1bfbf);
   root = new THREE.Object3D;
   root.add(ambientLight);
 
@@ -378,6 +398,12 @@ function createScene(canvas) {
 
   scene.add(root);
 
+
+  spotLight = new THREE.SpotLight (0x444343);
+
+  spotLight.position.set(0,150,0);
+
+  spotLight.castShadow = true;
 
 
 
@@ -474,10 +500,10 @@ function moveCharacter() {
     [{
         keys:[0,.25,.5,.75 ,1],
         values:[
-          {x:main_character.object.position.x ,y:main_character.object.position.y ,z:main_character.object.position.z },
-          {x:main_character.object.position.x ,y:main_character.object.position.y-2 ,z:main_character.object.position.z },
-          {x:main_character.object.position.x ,y:main_character.object.position.y ,z:main_character.object.position.z },
-          {x:main_character.newPos.x,y:main_character.newPos.y+2.2,z:main_character.newPos.z},
+          {x:main_character.object.position.x ,y:0 ,z:main_character.object.position.z },
+          {x:main_character.object.position.x ,y:-2 ,z:main_character.object.position.z },
+          {x:main_character.object.position.x ,y:0 ,z:main_character.object.position.z },
+          {x:main_character.newPos.x,y:2.2,z:main_character.newPos.z},
           {x:main_character.newPos.x,y:0,z:main_character.newPos.z}
         ],
         target: main_character.object.position
@@ -490,6 +516,7 @@ function moveCharacter() {
 }
 
 function onKeyUp(event){
+  if(gameEnded) return;
   switch(event.keyCode){
     case 65:
       main_character.update('L');
@@ -510,4 +537,8 @@ function bounceBack(){
   main_character.object.position.set(main_character.lastPos.x,0,main_character.lastPos.z)
   main_character.boxHelper.update();
   main_character.bBox.setFromObject(main_character.boxHelper);
+}
+
+function restartGame() {
+  location.reload();
 }
