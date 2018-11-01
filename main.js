@@ -221,13 +221,25 @@ function run() {
       }
     }
 
+    for (var i = 0; i < planks.length; i++) {
+      planks[i].plank.position.x += planks[i].speed;
+      if(planks[i].plank.position.x < -120 || planks[i].plank.position.x > 120){
+        planks[i].speed = planks[i].speed*-1;
+      }
+      planks[i].boxHelper.update();
+      planks[i].bBox.setFromObject(planks[i].boxHelper);
+    }
+
     for (var i = 0; i < waterBlocks.length; i++) {
       if(main_character.bBox.intersectsBox(waterBlocks[i])){
-        if(!main_character.bBox.intersectsBox(planks[i])){
+        if(!main_character.bBox.intersectsBox(planks[i].bBox)){
           gameEnded = true;
           main_character.object.position.set(main_character.resetPosition.x,main_character.resetPosition.y,main_character.resetPosition.z);
           main_character.farthest = main_character.resetPosition.z;
           main_character.update();
+        }
+        else{
+          main_character.object.position.x += planks[i].speed;
         }
       }
     }
@@ -396,9 +408,10 @@ function createPlank() {
   bBox.setFromObject(boxHelper);
   boxHelper.visible = visible;
 
+  speed = Math.random() * .8 + .2;
   scene.add(boxHelper);
-  planks.push(bBox);
-  // planks.push({plank:newPlank, bBox: bBox, boxHelper: boxHelper})
+
+  planks.push({plank:newPlank,boxHelper: boxHelper, bBox: bBox, speed: speed})
   scene.add(newPlank);
 }
 
