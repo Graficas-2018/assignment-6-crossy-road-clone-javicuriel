@@ -13,11 +13,12 @@ var renderer = null,
     cars =[],
     carBoxes = [],
     displacement = Math.abs(treeXRange[0].max - treeXRange[0].min)/gridSize,
-    lastPos = 0
-    visible = true
-    score = 0;
+    lastPos = 0,
+    visible = true,
+    score = 0,
+    blockWidth = 200;
 
-var blockGeometry = new THREE.BoxGeometry( 200, 10 ,displacement );
+var blockGeometry = new THREE.BoxGeometry( blockWidth, 10 ,displacement );
 
 class Element {
   constructor(object) {
@@ -208,7 +209,7 @@ function shuffleArray(array) {
 function createGrassBlock(minTrees, maxTrees) {
   var mapUrl = "objects/grass.jpg";
   var map = new THREE.TextureLoader().load(mapUrl);
-  var geometry = new THREE.PlaneGeometry(200, displacement, 10, 10);
+  var geometry = new THREE.PlaneGeometry(blockWidth, displacement, 10, 10);
   var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, side:THREE.DoubleSide}));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.z = -lastPos;
@@ -241,7 +242,7 @@ function createGrassBlock(minTrees, maxTrees) {
 }
 
 function createCarBlock(){
-  var geometry = new THREE.PlaneGeometry(200, displacement, 1, 1);
+  var geometry = new THREE.PlaneGeometry(blockWidth, displacement, 1, 1);
   var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0x949597, side:THREE.DoubleSide}));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.z = -lastPos;
@@ -304,7 +305,7 @@ function createTree(type, xPosition){
 function createWaterBlock() {
   var mapUrl = "objects/water_texture.jpg";
   var map = new THREE.TextureLoader().load(mapUrl);
-  var geometry = new THREE.PlaneGeometry(200, displacement, 1, 1);
+  var geometry = new THREE.PlaneGeometry(blockWidth, displacement, 1, 1);
   var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:0xffffff, map:map, transparent: true, opacity: 0.3,side:THREE.DoubleSide}));
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.z = -lastPos;
@@ -329,6 +330,8 @@ function createWaterBlock() {
 
 
   lastPos = lastPos + displacement;
+
+
 
 }
 
@@ -364,7 +367,7 @@ function createScene(canvas) {
 
 
   // var createBlocksAll = [(function(){createGrassBlock(0,4)})(), (function(){createCarBlock()})(), (function(){createWaterBlock()})()];
-  var createBlocksAll = [(function(){createGrassBlock(0,4)}), (function(){createCarBlock()}), (function(){createWaterBlock()})];
+  var createBlocksAll = [(function(){createGrassBlock(0,4);lastBlockWater = false;}), (function(){createCarBlock();lastBlockWater = false;}), (function(){createWaterBlock();lastBlockWater = true;})];
 
   for (var i = 0; i < 4; i++) {
     createBlocksAll.push((function(){createGrassBlock(0,4)}));
